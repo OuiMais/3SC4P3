@@ -1,7 +1,7 @@
 /**************************************************************************************
-                                    3SC4P3 - BOUTON                                    
+                                    3SC4P3 - BOUTON
                                     22/11/2019 - V1
-                                    
+                                    05/01/2023 - V2.1
                                     Florian HOFBAUER
 ***************************************************************************************/
 
@@ -20,21 +20,19 @@
   Bande Blanche: appuyer bouton B
   Bande Jaune: appuyer bouton B
   Bande autre Couleur: appuyer bouton A
- 
+
 ***************************************************************************************/
 
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 
-int pinBouton[2] = {7, 8};
+int pinBouton[2] = {7, 8}; // Bouton A et Bouton B
 
-#define REDPIN 5    //pin Rouge=5
-#define GREENPIN 6  //pin Vert=6
-#define BLUEPIN 3   //pin Bleu=3
+int pinBandeauRouge = 3, pinBandeauVert = 5, pinBandeauBleu = 6;
 
 LiquidCrystal_I2C screen(0x3F, 16, 2);
 
-int tirage[3] = {0, 0, 0}; //tirage[0] = tirage bouton, tirage[1] = tirage bandeau, tirage[2] = mot
+int tirage[3] = {0, 0, 0}; //tirage[0] = tirage couleur bouton, tirage[1] = tirage couleur bandeau, tirage[2] = tirage mot
 
 int couleurBandeau[7][3] = {0  , 0  , 255,  //bleu
                             255, 255, 255,  //blanc
@@ -58,299 +56,107 @@ char mot[5] = {'ABORT', 'DETONATE', 'CAR', 'FRK', 'HOLD'};
 
 int wrong = 0;
 
-int communication = {11};//pin de validation pour Master
+int communication = {11}; //pin de validation pour Master
 
-int etatBouton1, etatBouton2, etatBouton;
+int etatBoutonA, etatBoutonB, sommeEtatBouton;
 
 int couleurRouge, couleurVert, couleurBleu;
 
 void setup() {
   randomSeed(analogRead(0));
-  
-  pinMode(REDPIN, OUTPUT);
-  pinMode(GREENPIN, OUTPUT);
-  pinMode(BLUEPIN, OUTPUT);
-  
+
+  pinMode(pinBandeauRouge, OUTPUT);
+  pinMode(pinBandeauVert, OUTPUT);
+  pinMode(pinBandeauBleu, OUTPUT);
+
   for (int i = 0; i < 2; i++)
   {
     pinMode(pinBouton[i], INPUT_PULLUP);
   }
-  
+
   pinMode(communication, OUTPUT);
-  
+
   digitalWrite(communication, LOW);
-  
+
   tirageRandom();
   etatBouton();
   screen.begin(16, 2);
-  
+  screen.init();
+  screen.backlight();
+
+  screen.setCursor(0, 1);
+  screen.print(mot[tirage[2] - 1]);
+
+  // Le bouton est remplacé par un écran LCD qui peux changer de couleur
+  // Ici on met l'écran en couleur
   couleurRouge = couleurBouton[tirage[0] - 1][0];
   couleurVert = couleurBouton[tirage[0] - 1][1];
   couleurBleu = couleurBouton[tirage[0] - 1][2];
- // screen.setRGB(couleurRouge, couleurVert, couleurBleu);
-  screen.init();
-  screen.backlight();
-  screen.setCursor(0, 1);
-  screen.print(mot[tirage[2] - 1]);
+  // screen.setRGB(couleurRouge, couleurVert, couleurBleu);
 }
 
 void loop() {
-  if (tirage[0] == 1 && tirage[2] == 1) {//bouton bleu + ABORT
-    etatBouton();
-    while (etatBouton == 2) {
-      delay(0);
-      etatBouton();
-    }
-    if (digitalRead(pinBouton[0]) == 0) {
+  if (tirage[0] == 1 && tirage[2] == 1) {  //bouton bleu + ABORT
+    attenteAppui();
+    if (!etatBoutonA) {
       delay(500);
-      couleurFixetatBoutonandeau();
-      if (tirage[1] == 1) {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 2) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 3) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      else {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
+      refererBandeau();
+    } else {
+      wrong += 1;
+    }
+  }
+  if (tirage[2] == 2) {                    //bouton detonate
+    attenteAppui();
+    if (!etatBoutonB) {
+      winner();
     }
     else {
       wrong += 1;
     }
   }
-  if (tirage[2] == 2) {//bouton detonate
-    etatBouton();
-    while (etatBouton == 2) {
-      delay(0);
-      etatBouton();
-    }
-    if (digitalRead(pinBouton[1]) == 0) {
-      screen.print("WINNER");
-      delay(1000);
-      digitalWrite(communication, HIGH);
-    }
-    else {
-      wrong += 1;
-    }
-  }
-  if (tirage[0] == 2 && tirage[2] == 3) {//bouton blanc et CAR
-    etatBouton();
-    while (etatBouton == 2) {
-      delay(0);
-      etatBouton();
-    }
-    if (digitalRead(pinBouton[0]) == 0) {
+  if (tirage[0] == 2 && tirage[2] == 3) {  //bouton blanc et CAR
+    attenteAppui();
+    if (!etatBoutonA) {
       delay(500);
-      couleurFixetatBoutonandeau();
-      if (tirage[1] == 1) {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 2) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 3) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      else {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
+      refererBandeau();
     }
     else {
       wrong += 1;
     }
   }
-  if (tirage[2] == 4) {//bouton FRK
-    etatBouton();
-    while (etatBouton == 2) {
-      delay(0);
-      etatBouton();
-    }
-    if (digitalRead(pinBouton[1]) == 0) {
-      screen.print("WINNER");
-      delay(1000);
-      digitalWrite(communication, HIGH);
+  if (tirage[2] == 4) {                    //bouton FRK
+    attenteAppui();
+    if (!etatBoutonB) {
+      winner();
     }
     else {
       wrong += 1;
     }
   }
-  if (tirage[0] == 3) {//bouton jaune
-    etatBouton();
-    while (etatBouton == 2) {
-      delay(0);
-      etatBouton();
-    }
-    if (digitalRead(pinBouton[0]) == 0) {
+  if (tirage[0] == 3) {                    //bouton jaune
+    attenteAppui();
+    if (!etatBoutonA) {
       delay(500);
-      couleurFixetatBoutonandeau();
-      if (tirage[1] == 1) {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 2) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 3) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      else {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
+      refererBandeau();
     }
     else {
       wrong += 1;
     }
   }
-  if (tirage[0] == 4 && tirage[2] == 5) {//bouton rouge et HOLD
-    etatBouton();
-    while (etatBouton == 2) {
-      delay(0);
-      etatBouton();
-    }
-    if (digitalRead(pinBouton[1]) == 0) {
-      screen.print("WINNER");
-      delay(1000);
-      digitalWrite(communication, HIGH);
+  if (tirage[0] == 4 && tirage[2] == 5) {  //bouton rouge et HOLD
+    attenteAppui();
+    if (!etatBoutonB) {
+      winner();
     }
     else {
       wrong += 1;
     }
   }
-  else {//autre cas
-    etatBouton();
-    while (etatBouton == 2) {
-      delay(0);
-      etatBouton();
-    }
-    if (digitalRead(pinBouton[0]) == 0) {
+  else {                                   //autre cas
+    attenteAppui();
+    if (!etatBoutonA) {
       delay(500);
-      couleurFixetatBoutonandeau();
-      if (tirage[1] == 1) {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 2) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      if (tirage[1] == 3) {
-        if (digitalRead(pinBouton[1]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
-      else {
-        if (digitalRead(pinBouton[0]) == 0) {
-          screen.print("WINNER");
-          delay(1000);
-          digitalWrite(communication, HIGH);
-        }
-        else {
-          wrong += 1;
-        }
-      }
+      refererBandeau();
     }
     else {
       wrong += 1;
@@ -370,20 +176,73 @@ void tirageRandom() {
 }
 
 void etatBouton() {
-  etatBouton1 = digitalRead(pinBouton[0]);
-  etatBouton2 = digitalRead(pinBouton[1]);
-  etatBouton = etatBouton1 + etatBouton2;
-  return etatBouton;
+  etatBoutonA = digitalRead(pinBouton[0]);
+  etatBoutonB = digitalRead(pinBouton[1]);
+  sommeEtatBouton = etatBoutonA + etatBoutonB;
+  return sommeEtatBouton;
 }
 
-void couleurFixetatBoutonandeau() {
+void attenteAppui() {
+  etatBouton();
+  while (sommeEtatBouton == 2) {
+    delay(1);
+    etatBouton();
+  }
+}
+
+void winner() {
+  screen.print("WINNER");
+  delay(1000);
+  digitalWrite(communication, HIGH);
+  delay(60000);
+}
+
+void refererBandeau() {
+  couleurFixeBandeau();
+  switch (tirage[1]) {
+    case 1:
+      attenteAppui();
+      if (!etatBoutonA) {
+        winner();
+      } else {
+        wrong += 1;
+      }
+      break;
+    case 2:
+      attenteAppui();
+      if (!etatBoutonB) {
+        winner();
+      } else {
+        wrong += 1;
+      }
+      break;
+    case 3:
+      attenteAppui();
+      if (!etatBoutonB) {
+        winner();
+      } else {
+        wrong += 1;
+      }
+      break;
+    default:
+      attenteAppui();
+      if (!etatBoutonA) {
+        winner();
+      } else {
+        wrong += 1;
+      }
+      break;
+  }
+}
+
+void couleurFixeBandeau() {
   int red, blue, green;
   red = couleurBandeau[tirage[1] - 1][0];
   green = couleurBandeau[tirage[1] - 1][1];
   blue = couleurBandeau[tirage[1] - 1][2];
-  analogWrite(GREENPIN, green);
-  analogWrite(BLUEPIN, blue);
-  analogWrite(REDPIN, red);
+  analogWrite(pinBandeauVert, green);
+  analogWrite(pinBandeauBleu, blue);
+  analogWrite(pinBandeauRouge, red);
 }
 
 void pushReset() {
