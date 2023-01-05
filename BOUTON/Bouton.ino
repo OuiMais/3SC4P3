@@ -1,10 +1,12 @@
-/*
-  Programme  pour Escape Game
-  22/11/2019 - /2019 Saint-Quentin
-  Florian HOFBAUER
-*/
+/**************************************************************************************
+                                    3SC4P3 - BOUTON                                    
+                                    22/11/2019 - V1
+                                    
+                                    Florian HOFBAUER
+***************************************************************************************/
 
-/*
+/***********************************   REGLES  ****************************************
+
    1) Si le bouton est bleu et est marqué Abort, appuyer sur le bouton A, puis référez-vous à bandeau couleur
    2) Si le bouton est marqué Detonate, appuyer bouton B
    3) si bouton blanc et est marqué CAR, appuyer bouton A, puis référez-vous à bandeau couleur
@@ -18,75 +20,91 @@
   Bande Blanche: appuyer bouton B
   Bande Jaune: appuyer bouton B
   Bande autre Couleur: appuyer bouton A
-*/
+ 
+***************************************************************************************/
+
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 
 int pinBouton[2] = {7, 8};
-#define REDPIN 5//pin Rouge=5
-#define GREENPIN 6//pin Vert=6
-#define BLUEPIN 3//pin Bleu=3
+
+#define REDPIN 5    //pin Rouge=5
+#define GREENPIN 6  //pin Vert=6
+#define BLUEPIN 3   //pin Bleu=3
 
 LiquidCrystal_I2C screen(0x3F, 16, 2);
 
-int nb[3] = {0, 0, 0}; //nb[0] = nb bouton, nb[1] = nb bandeau, nb[2] = char
-int couleurBandeau[7][3] = {0  , 0  , 255,//bleu
-                            255, 255, 255,//blanc
-                            255, 255, 0  ,//jaune
-                            255, 0  , 0  ,//rouge
-                            0  , 255, 0  ,//vert
-                            255, 0  , 255,//rose
-                            0  , 255, 255//turquoise
+int tirage[3] = {0, 0, 0}; //tirage[0] = tirage bouton, tirage[1] = tirage bandeau, tirage[2] = mot
+
+int couleurBandeau[7][3] = {0  , 0  , 255,  //bleu
+                            255, 255, 255,  //blanc
+                            255, 255, 0  ,  //jaune
+                            255, 0  , 0  ,  //rouge
+                            0  , 255, 0  ,  //vert
+                            255, 0  , 255,  //rose
+                            0  , 255, 255   //turquoise
                            };
-int couleurBouton[7][3] = {0  , 0  , 255,//bleu
-                           255, 255, 255,//blanc
-                           255, 255, 0  ,//jaune
-                           255, 0  , 0  ,//rouge
-                           0  , 255, 0  ,//vert
-                           255, 0  , 255,//rose
-                           0  , 255, 255//turquoise
-                          };
+
+int couleurBouton[7][3] =  {0  , 0  , 255,  //bleu
+                            255, 255, 255,  //blanc
+                            255, 255, 0  ,  //jaune
+                            255, 0  , 0  ,  //rouge
+                            0  , 255, 0  ,  //vert
+                            255, 0  , 255,  //rose
+                            0  , 255, 255   //turquoise
+                           };
+
 char mot[5] = {'ABORT', 'DETONATE', 'CAR', 'FRK', 'HOLD'};
+
 int wrong = 0;
+
 int communication = {11};//pin de validation pour Master
-int b1, b2, eB;
-int colorR, colorG, colorB;
+
+int etatBouton1, etatBouton2, etatBouton;
+
+int couleurRouge, couleurVert, couleurBleu;
 
 void setup() {
   randomSeed(analogRead(0));
+  
   pinMode(REDPIN, OUTPUT);
   pinMode(GREENPIN, OUTPUT);
   pinMode(BLUEPIN, OUTPUT);
+  
   for (int i = 0; i < 2; i++)
   {
     pinMode(pinBouton[i], INPUT_PULLUP);
   }
+  
   pinMode(communication, OUTPUT);
+  
   digitalWrite(communication, LOW);
-  ranDomNombre();
+  
+  tirageRandom();
   etatBouton();
   screen.begin(16, 2);
-  colorR = couleurBouton[nb[0] - 1][0];
-  colorG = couleurBouton[nb[0] - 1][1];
-  colorB = couleurBouton[nb[0] - 1][2];
- // screen.setRGB(colorR, colorG, colorB);
+  
+  couleurRouge = couleurBouton[tirage[0] - 1][0];
+  couleurVert = couleurBouton[tirage[0] - 1][1];
+  couleurBleu = couleurBouton[tirage[0] - 1][2];
+ // screen.setRGB(couleurRouge, couleurVert, couleurBleu);
   screen.init();
   screen.backlight();
   screen.setCursor(0, 1);
-  screen.print(mot[nb[2] - 1]);
+  screen.print(mot[tirage[2] - 1]);
 }
 
 void loop() {
-  if (nb[0] == 1 && nb[2] == 1) {//bouton bleu + ABORT
+  if (tirage[0] == 1 && tirage[2] == 1) {//bouton bleu + ABORT
     etatBouton();
-    while (eB == 2) {
+    while (etatBouton == 2) {
       delay(0);
       etatBouton();
     }
     if (digitalRead(pinBouton[0]) == 0) {
       delay(500);
-      couleurFixeBandeau();
-      if (nb[1] == 1) {
+      couleurFixetatBoutonandeau();
+      if (tirage[1] == 1) {
         if (digitalRead(pinBouton[0]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -96,7 +114,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 2) {
+      if (tirage[1] == 2) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -106,7 +124,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 3) {
+      if (tirage[1] == 3) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -131,9 +149,9 @@ void loop() {
       wrong += 1;
     }
   }
-  if (nb[2] == 2) {//bouton detonate
+  if (tirage[2] == 2) {//bouton detonate
     etatBouton();
-    while (eB == 2) {
+    while (etatBouton == 2) {
       delay(0);
       etatBouton();
     }
@@ -146,16 +164,16 @@ void loop() {
       wrong += 1;
     }
   }
-  if (nb[0] == 2 && nb[2] == 3) {//bouton blanc et CAR
+  if (tirage[0] == 2 && tirage[2] == 3) {//bouton blanc et CAR
     etatBouton();
-    while (eB == 2) {
+    while (etatBouton == 2) {
       delay(0);
       etatBouton();
     }
     if (digitalRead(pinBouton[0]) == 0) {
       delay(500);
-      couleurFixeBandeau();
-      if (nb[1] == 1) {
+      couleurFixetatBoutonandeau();
+      if (tirage[1] == 1) {
         if (digitalRead(pinBouton[0]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -165,7 +183,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 2) {
+      if (tirage[1] == 2) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -175,7 +193,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 3) {
+      if (tirage[1] == 3) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -200,9 +218,9 @@ void loop() {
       wrong += 1;
     }
   }
-  if (nb[2] == 4) {//bouton FRK
+  if (tirage[2] == 4) {//bouton FRK
     etatBouton();
-    while (eB == 2) {
+    while (etatBouton == 2) {
       delay(0);
       etatBouton();
     }
@@ -215,16 +233,16 @@ void loop() {
       wrong += 1;
     }
   }
-  if (nb[0] == 3) {//bouton jaune
+  if (tirage[0] == 3) {//bouton jaune
     etatBouton();
-    while (eB == 2) {
+    while (etatBouton == 2) {
       delay(0);
       etatBouton();
     }
     if (digitalRead(pinBouton[0]) == 0) {
       delay(500);
-      couleurFixeBandeau();
-      if (nb[1] == 1) {
+      couleurFixetatBoutonandeau();
+      if (tirage[1] == 1) {
         if (digitalRead(pinBouton[0]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -234,7 +252,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 2) {
+      if (tirage[1] == 2) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -244,7 +262,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 3) {
+      if (tirage[1] == 3) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -269,9 +287,9 @@ void loop() {
       wrong += 1;
     }
   }
-  if (nb[0] == 4 && nb[2] == 5) {//bouton rouge et HOLD
+  if (tirage[0] == 4 && tirage[2] == 5) {//bouton rouge et HOLD
     etatBouton();
-    while (eB == 2) {
+    while (etatBouton == 2) {
       delay(0);
       etatBouton();
     }
@@ -286,14 +304,14 @@ void loop() {
   }
   else {//autre cas
     etatBouton();
-    while (eB == 2) {
+    while (etatBouton == 2) {
       delay(0);
       etatBouton();
     }
     if (digitalRead(pinBouton[0]) == 0) {
       delay(500);
-      couleurFixeBandeau();
-      if (nb[1] == 1) {
+      couleurFixetatBoutonandeau();
+      if (tirage[1] == 1) {
         if (digitalRead(pinBouton[0]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -303,7 +321,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 2) {
+      if (tirage[1] == 2) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -313,7 +331,7 @@ void loop() {
           wrong += 1;
         }
       }
-      if (nb[1] == 3) {
+      if (tirage[1] == 3) {
         if (digitalRead(pinBouton[1]) == 0) {
           screen.print("WINNER");
           delay(1000);
@@ -345,24 +363,24 @@ void loop() {
   }
 }
 
-void ranDomNombre() {
-  nb[0] = random(1, 8);
-  nb[1] = random(1, 8);
-  nb[2] = random(1, 6);
+void tirageRandom() {
+  tirage[0] = random(1, 8);
+  tirage[1] = random(1, 8);
+  tirage[2] = random(1, 6);
 }
 
 void etatBouton() {
-  b1 = digitalRead(pinBouton[0]);
-  b2 = digitalRead(pinBouton[1]);
-  eB = b1 + b2;
-  return eB;
+  etatBouton1 = digitalRead(pinBouton[0]);
+  etatBouton2 = digitalRead(pinBouton[1]);
+  etatBouton = etatBouton1 + etatBouton2;
+  return etatBouton;
 }
 
-void couleurFixeBandeau() {
+void couleurFixetatBoutonandeau() {
   int red, blue, green;
-  red = couleurBandeau[nb[1] - 1][0];
-  green = couleurBandeau[nb[1] - 1][1];
-  blue = couleurBandeau[nb[1] - 1][2];
+  red = couleurBandeau[tirage[1] - 1][0];
+  green = couleurBandeau[tirage[1] - 1][1];
+  blue = couleurBandeau[tirage[1] - 1][2];
   analogWrite(GREENPIN, green);
   analogWrite(BLUEPIN, blue);
   analogWrite(REDPIN, red);
