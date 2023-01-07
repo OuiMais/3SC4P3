@@ -58,7 +58,7 @@ int wrong = 0;
 
 int communication = {11}; //pin de validation pour Master
 
-int etatBoutonA, etatBoutonB, sommeEtatBouton;
+bollean etatBoutonA, etatBoutonB, sommeEtatBouton;
 
 int couleurRouge, couleurVert, couleurBleu;
 
