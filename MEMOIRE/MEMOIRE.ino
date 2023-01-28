@@ -1,23 +1,35 @@
-/*
-  Programme MEMOIRE pour 3SC4PE
-  21/10/2019 - 20/11/2019 Saint-Quentin
-  Florian HOFBAUER
-*/
+/**************************************************************************************
+                                    3SC4P3 - MEMOIRE
+                                    21/11/2019 - V1
+                                    28/01/2023 - V2.1
+                                    Florian HOFBAUER
+***************************************************************************************/
 
-#include <LiquidCrystal_I2C.h>
+/***********************************   REGLES  ****************************************
+
+   Etape / N°       1           2           3           4
+     1          2ème pos    2eme pos    3eme pos    4eme pos
+     2          chiffre 4   M etape 1   1ere pos    M etape 1
+     3          M etape 2   M etape 1   3eme pos    chiffre 4
+     4          M etape 1   1ere pos    M etape 2   M etape 2
+     5          M etape 1   M etape 2   M etape 4   M etape 3
+
+***************************************************************************************/
 
 int pinBouton[4] = {3, 4, 5, 6};
-int pinLed [5] = {2, 7, 8, 9, 10};//vert si correct, éteint sinon
+int pinLed [5] = {2, 7, 8, 9, 10}; //vert si correct, éteint sinon
+int pinSeptSegments[7] = {14, 15, 16, 17, 18, 19, 20}; // Afficheur n° bouton + chiffre etape
+int pinMasseSegments[5] = {21, 22, 23, 24, 25}; // Bouton 1 à 4 et chiffre étpae
+int ordreBouton[4];
+int chiffre[4]; // bouton qui correspond à chaque chiffre
+
 int communication = {11};//pin de validation pour Master
-int perteTps = {12};//pin perte de temps unique sur Master
-int bouton[4];
-int nb[5] = {0, 0, 0, 0, 0};
-int e[5] = {0, 0, 0, 0, 0};//bouton de l etape
+int etatBouton[4];
+int tirage[5] = {0, 0, 0, 0, 0};
+int etapeBouton[5] = {0, 0, 0, 0, 0};//bouton de l etape
 int etape = 0;
 int wrong = 0;
-int eB; //etatbouton
-
-LiquidCrystal_I2C screen(0x3F, 16, 2);
+int sommeEtatBouton; //etatbouton
 
 void setup() {
   for (int i = 0; i < 4; i++)
@@ -28,163 +40,198 @@ void setup() {
   {
     pinMode(pinLed[i], OUTPUT);
     digitalWrite(pinLed[i], LOW);//LED off
+    pinMode(pinMasseSegments[i], OUTPUT);
+    digitalWrite(pinMasseSegments[i], HIGH);
+  }
+  for (int i = 0; i < 7; i++)
+  {
+    pinMode(pinSeptSegments[i], OUTPUT);
+    digitalWrite(pinSeptSegments[i], LOW);//LED off
   }
   pinMode(communication, OUTPUT);
   digitalWrite(communication, LOW);
   randomSeed(analogRead(0));
-  ranDomNombre();
-  int nb0 = nb[0];
-  int nb1 = nb[1];
-  int nb2 = nb[2];
-  int nb3 = nb[3];
-  int nb4 = nb[4];
-  etape1(nb0,nb1,nb2,nb3,nb4);
-  screen.init();
-  screen.backlight();
-  screen.setCursor(5,0);
-  screen.print("BONJOUR");
+  tirageRandom();
+  boutonEtape(tirage[0], tirage[1], tirage[2], tirage[3], tirage[4]);
   delay(2500);
-  etatBouton();
-  screen.clear();
+  fonctionEtatBouton();
 }
 
 void loop() {
   for (etape = 0; etape < 5; etape++) {
-    screen.setCursor(8,0);
-    screen.print(nb[etape]);
-    etatBouton();
-    while (eB == 4) {
+    affichageNumero();
+    fonctionEtatBouton();
+    while (sommeEtatBouton == 4) {
       delay(0);
-      etatBouton();
+      fonctionEtatBouton();
+      affichageNumero();
     }
-    if (digitalRead(pinBouton[e[etape]-1]) == 0) {
-      digitalWrite(pinLed[2*etape], HIGH);
+    if (digitalRead(pinBouton[etapeBouton[etape] - 1]) == 0) {
+      digitalWrite(pinLed[etape], HIGH);
       delay(500);
     }
     else {
-      wrong = wrong + 1;
+      etape = 0;
       delay(500);
     }
-    if (wrong == 2){
-      screen.clear();
-      screen.setCursor(4,0);
-      screen.print("YOU LOOSE");
-      screen.setCursor(5,1);
-      screen.print("RESTART");
-      delay(10000);
-      pushReset();
-    }
-    screen.setCursor(0,0);
-    screen.print("->");
-    delay(1000);
-    screen.clear();
   }
-  if (wrong == 1) {
-    screen.clear();
-    screen.print("YOU LOOSE 10 MIN");
-    screen.setCursor(4,1);
-    screen.println("GOOD LUCK");
-    for (int i = 0; i < 10; i++)
-    {
-      digitalWrite(pinLed[i], LOW);
-    }
-    digitalWrite(perteTps, HIGH);
-    delay(100);
-    digitalWrite(perteTps, LOW);
-    delay(100);
-    digitalWrite(communication, HIGH);
+
+  for (int i = 0; i < 5; i++) {
+    digitalWrite(pinLed[i], LOW);//sortie des pin, LED éteintes
+    digitalWrite(pinMasseSegments[i], HIGH);
   }
-  if (wrong == 0) {
-    screen.clear();
-    screen.setCursor(5,0);
-    screen.print("YOU WIN");
-    for (int i = 0; i < 10; i++)
-    {
-      digitalWrite(pinLed[i], LOW);//sortie des pin, LED éteintes
-    }
-    digitalWrite(communication, HIGH);
+  for (int i = 0; i < 7; i++) {
+    digitalWrite(pinSeptSegments[i], LOW);//sortie des pin, LED éteintes
   }
+  digitalWrite(communication, HIGH);
   delay(10000);
 }
 
-void etape1(int nb0, int nb1, int nb2, int nb3, int nb4) {
-  if (nb0 == 1) {
-    e[0] = 2;
+void boutonEtape(int nb0, int nb1, int nb2, int nb3, int nb4) {
+  switch (nb0) {
+    case 1:
+      etapeBouton[0] = 2;
+      break;
+    case 2:
+      etapeBouton[0] = 2;
+      break;
+    case 3:
+      etapeBouton[0] = 3;
+      break;
+    case 4:
+      etapeBouton[0] = 4;
+      break;
+    default:
+      break;
   }
-  if (nb0 == 2) {
-    e[0] = 2;
+  switch (nb1) {
+    case 1:
+      etapeBouton[1] = chiffre[3];
+      break;
+    case 2:
+      etapeBouton[1] = etapeBouton[0];
+      break;
+    case 3:
+      etapeBouton[1] = 1;
+      break;
+    case 4:
+      etapeBouton[1] = etapeBouton[0];
+      break;
+    default:
+      break;
   }
-  if (nb0 == 3) {
-    e[0] = 3;
+  switch (nb2) {
+    case 1:
+      etapeBouton[2] = etapeBouton[1];
+      break;
+    case 2:
+      etapeBouton[2] = etapeBouton[0];
+      break;
+    case 3:
+      etapeBouton[2] = 3;
+      break;
+    case 4:
+      etapeBouton[2] = chiffre[3];
+      break;
+    default:
+      break;
   }
-  if (nb0 == 4) {
-    e[0] = 4;
+  switch (nb3) {
+    case 1:
+      etapeBouton[3] = etapeBouton[0];
+      break;
+    case 2:
+      etapeBouton[3] = 1;
+      break;
+    case 3:
+      etapeBouton[3] = etapeBouton[1];
+      break;
+    case 4:
+      etapeBouton[3] = etapeBouton[1];
+      break;
+    default:
+      break;
   }
-  if (nb1 == 1) {
-    e[1] = 4;
-  }
-  if (nb1 == 2) {//meme bouton que etape 1
-    e[1] = e[0];
-  }
-  if (nb1 == 3) {
-    e[1] = 1;
-  }
-  if (nb1 == 4) {//meme bouton que etape 1
-    e[1] = e[0];
-  }
-  if (nb2 == 1) {//meme bouton que etape 2
-    e[2] = e[1];
-  }
-  if (nb2 == 2) {//meme bouton que etape 1
-    e[2] = e[0];
-  }
-  if (nb2 == 3) {
-    e[2] = 3;
-  }
-  if (nb2 == 4) {
-    e[2] = 4;
-  }
-  if (nb3 == 1) {//meme bouton que etape 1
-    e[3] = e[0];
-  }
-  if (nb3 == 2) {
-    e[3] = 1;
-  }
-  if (nb3 == 3) {//meme bouton que etape 2
-    e[3] = e[1];
-  }
-  if (nb3 == 4) {//meme bouton que etape 2
-    e[3] = e[1];
-  }
-  if (nb4 == 1) {//meme bouton que etape 1
-    e[4] = e[0];
-  }
-  if (nb4 == 2) {//meme bouton que etape 2
-    e[4] = e[1];
-  }
-  if (nb4 == 3) {//meme bouton que etape 4
-    e[4] = e[3];
-  }
-  if (nb4 == 4) {//meme bouton que etape 3
-    e[4] = e[2];
+  switch (nb4) {
+    case 1:
+      etapeBouton[4] = etapeBouton[0];
+      break;
+    case 2:
+      etapeBouton[4] = etapeBouton[1];
+      break;
+    case 3:
+      etapeBouton[4] = etapeBouton[3];
+      break;
+    case 4:
+      etapeBouton[4] = etapeBouton[2];
+      break;
+    default:
+      break;
   }
 }
 
-void ranDomNombre() {
-  nb[0] = random(1, 5);
-  nb[1] = random(1, 5);
-  nb[2] = random(1, 5);
-  nb[3] = random(1, 5);
-  nb[4] = random(1, 5);
+void tirageRandom() {
+  tirage[0] = random(1, 5);
+  tirage[1] = random(1, 5);
+  tirage[2] = random(1, 5);
+  tirage[3] = random(1, 5);
+  tirage[4] = random(1, 5);
+  for (int i = 0; i < 4; i++) {
+    int value;
+    boolean check = false;
+    while (check == false) {
+      value = random(1, 5);
+      check = true;
+      for (int j = 0; j < 4; j++) {
+        if (value == ordreBouton[j]) {
+          check = false;
+        }
+      }
+    }
+    ordreBouton[i] = value;
+  }
+  for (int t = 1; t < 5; t++) {
+    for (int y = 0; y < 4; y ++) {
+      if (ordreBouton[y] == t) {
+        chiffre[t - 1] = y;
+      }
+    }
+  }
 }
 
-void etatBouton() {
-  bouton[0] = digitalRead(pinBouton[0]);
-  bouton[1] = digitalRead(pinBouton[1]);
-  bouton[2] = digitalRead(pinBouton[2]);
-  bouton[3] = digitalRead(pinBouton[3]);
-  eB = bouton[0] + bouton[1] + bouton[2] + bouton[3];
-  return eB;
+void affichageNumero() {
+  const int nombre[10][7] = {1, 1, 1, 1, 1, 1, 0,
+                             0, 1, 1, 0, 0, 0, 0,
+                             1, 1, 0, 1, 1, 0, 1,
+                             1, 1, 1, 1, 0, 0, 1,
+                             0, 1, 1, 0, 0, 1, 1,
+                             1, 0, 1, 1, 0, 1, 1,
+                             0, 0, 1, 1, 1, 1, 1,
+                             1, 1, 1, 0, 0, 0, 0,
+                             1, 1, 1, 1, 1, 1, 1,
+                             1, 1, 1, 0, 0, 1, 1
+                            };
+
+  int affichage[5] = {ordreBouton[0], ordreBouton[1], ordreBouton[2], ordreBouton[3], tirage[etape]};
+
+  for (int n = 0; n < 5; n++) {
+    digitalWrite(pinMasseSegments[n], HIGH);
+    for (int m = 0; m < 7; m++) {
+      digitalWrite(pinSeptSegments[m], !nombre[affichage[n]][m]);
+    }
+    delay(5);
+    digitalWrite(pinMasseSegments[n], LOW);
+    delay(5);
+  }
+}
+
+void fonctionEtatBouton() {
+  etatBouton[0] = digitalRead(pinBouton[0]);
+  etatBouton[1] = digitalRead(pinBouton[1]);
+  etatBouton[2] = digitalRead(pinBouton[2]);
+  etatBouton[3] = digitalRead(pinBouton[3]);
+  sommeEtatBouton = etatBouton[0] + etatBouton[1] + etatBouton[2] + etatBouton[3];
+  return sommeEtatBouton;
 }
 
 void pushReset() {
