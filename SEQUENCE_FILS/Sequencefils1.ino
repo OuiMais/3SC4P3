@@ -1,3 +1,13 @@
+/*
+    Projet : 3SC4P3 / SEQUENCE_FILS
+    Date Creation : 29/10/2019
+    Date Revision : 28/08/2023
+    Entreprise : 3SC4P3
+    Auteur: Florian HOFBAUER
+    Contact : 
+    But : Code du module sequence fil
+*/
+
 //Séquence de fils, il y a une plaque avec 6 bornes: A,B,C,1,2,3 et il faudra se servir de la fonction Stringcompare
 const int sortielettre[3][7]={                      //Tableau contenant la liste des LEDs qui doivent être allumés pour former les lettes
   {1,1,1,0,1,1,1},  //A
