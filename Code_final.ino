@@ -1,3 +1,13 @@
+/*
+    Projet : 3SC4P3
+    Date Creation : 28/01/2022
+    Date Revision : 28/08/2023
+    Entreprise : 3SC4P3
+    Auteur: Florian HOFBAUER
+    Contact : 
+    But : Fichier principal
+*/
+
 // Déclaration des différentes bilbiothèques utilisées
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
