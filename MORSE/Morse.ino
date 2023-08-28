@@ -1,3 +1,13 @@
+/*
+    Projet : 3SC4P3 / MORSE
+    Date Creation : 29/10/2019
+    Date Revision : 28/08/2023
+    Entreprise : 3SC4P3
+    Auteur: Florian HOFBAUER
+    Contact : 
+    But : Code du module morse seul
+*/
+
 // Déclaration des différents tableaux utilisés
 //String lettres[18] = {"A", "B", "C", "E", "F", "G", "H", "I", "K", "L", "M", "N", "O", "R", "S", "T", "V", "X"}; // Lettres utilisées pour coder le mot en morse
 String mots[16] = {"SHELL", "HALLS", "SLICK", "TRICK", "BOXES", "LEAKS", "STROBE", "BISTRO", "FLICK", "BOMBS", "BREAK", "BRICK", "STEAK", "STING", "VECTOR", "BEATS"}; // Liste des 16 mots pouvant être utilisés et codés en morse
