@@ -1,7 +1,11 @@
 /*
-  Programme SIMON pour 3SC4PE
-  29/10/2019 - 19/11/2019 Saint-Quentin
-  Florian HOFBAUER
+    Projet : 3SC4P3 / SIMON
+    Date Creation : 29/10/2019
+    Date Revision : 28/08/2023
+    Entreprise : 3SC4P3
+    Auteur: Florian HOFBAUER
+    Contact : 
+    But : Code du module SIMON seul
 */
 
 int pinBouton[4] = {6, 7, 8, 9}; //4 boutons couleurs //bouton[1] = boutonRouge;bouton[2] = boutonBleu;bouton[3] = boutonVert;bouton[4] = boutonJaune;
