@@ -9,11 +9,11 @@
 */
 
 int pinBouton[4] = {6, 7, 8, 9}; //4 boutons couleurs //bouton[1] = boutonRouge;bouton[2] = boutonBleu;bouton[3] = boutonVert;bouton[4] = boutonJaune;
-int pinLed[4] = {2, 5, 4, 3};//4 leds de couleurs diff //ledVerte = pinLed[1];ledRouge = pinLed[2];ledBleu = pinLed[3];ledJaune = pinLed[4];
+int pinLed[4] = {2, 5, 4, 3}; //4 leds de couleurs diff //ledVerte = pinLed[1];ledRouge = pinLed[2];ledBleu = pinLed[3];ledJaune = pinLed[4];
 int b1, b2, b3, b4, eB, tour;
 int wrong = 0;
 int perteTps = 12;
-int communication = {11};//pin de validation pour Master
+int communication = 11;//pin de validation pour Master
 int nb[5] = {0, 0, 0, 0, 0};
 int etape = 0;
 

@@ -29,10 +29,9 @@ byte rect[8] = {
   B11111
 }; // Tableau permettant de faire afficher un rectangle remplit.
 
-void setup()
-{
-    ecran.init(); // Taille de l'écran
-    ecran.backlight();
+void setup() {
+  ecran.init(); // Taille de l'écran
+  ecran.backlight();
   ecran.createChar(5, rect);
   ecran.setCursor(0, 0);
   ecran.write((uint8_t) 0); // Test de l'écran au démarrage.
@@ -42,8 +41,7 @@ void setup()
   Serial.begin(9600);
 }
 
-void loop()
-{
+void loop() {
   while (l <= 16) { // Tant que le condensateur n'est pas chargé au maximum :
     ecran.setCursor(l, 0); // Déplacement en fonction de la valeur l de la charge du condensateur sur la première ligne.
     ecran.write(5);
